@@ -9,7 +9,7 @@ import Prelude
 import Data.Argonaut.Generic.Aeson as Aeson
 import Data.Argonaut.Core (Json)
 import Data.Either (Either)
-import Data.Generic (class Generic, GenericSpine(SString), toSpine)
+import Data.Generic (class Generic, GenericSpine(SString, SProd), toSpine)
 import Global (encodeURIComponent)
 
 
@@ -40,6 +40,9 @@ gDefaultEncodeHeader :: forall a. Generic a => a -> URLPiece
 gDefaultEncodeHeader v =
   case toSpine v of
     SString s -> s -- Special case string - just use it as is (http-api-data compatibility).
+    SProd _ [f] -> case f unit of
+      SString s -> s
+      _ -> show <<< Aeson.encodeJson $ v
     _ -> show <<< Aeson.encodeJson $ v
 
 -- | Full encoding based on gDefaultToURLPiece
