@@ -37,13 +37,15 @@ gDefaultToURLPiece = gDefaultEncodeHeader
 
 -- | Just use the robust JSON format.
 gDefaultEncodeHeader :: forall a. Generic a => a -> URLPiece
-gDefaultEncodeHeader v =
-  case toSpine v of
-    SString s -> s -- Special case string - just use it as is (http-api-data compatibility).
-    SProd _ [f] -> case f unit of
-      SString s -> s
+gDefaultEncodeHeader v = go $ toSpine v
+  where
+    go a = case a of
+      SString s -> s -- Special case string - just use it as is (http-api-data compatibility).
+      SProd _ [f] -> case f unit of
+        SString s -> s
+        SProd _ [g] -> go $ g unit
+        _ -> show <<< Aeson.encodeJson $ v
       _ -> show <<< Aeson.encodeJson $ v
-    _ -> show <<< Aeson.encodeJson $ v
 
 -- | Full encoding based on gDefaultToURLPiece
 gDefaultEncodeURLPiece :: forall a. Generic a => a -> URLPiece
