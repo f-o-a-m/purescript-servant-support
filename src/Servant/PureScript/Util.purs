@@ -2,7 +2,8 @@ module Servant.PureScript.Util where
 
 import Prelude
 import Control.Monad.Error.Class (class MonadError, throwError)
-import Data.Foreign.Generic.Class (class GenericEncode, class GenericDecode)
+import Data.Argonaut.Aeson.Decode.Generic (class DecodeAeson)
+import Data.Argonaut.Aeson.Encode.Generic (class EncodeAeson)
 import Data.Argonaut.Core (Json)
 import Data.Argonaut.Parser (jsonParser)
 import Data.Bifunctor (lmap)
@@ -20,7 +21,7 @@ import Servant.PureScript.Settings (SPSettings_(SPSettings_), SPSettingsToUrlPie
 getResult
   :: forall a m r
    . Generic a r
-  => GenericDecode r
+  => DecodeAeson r
   => MonadError AjaxError m
   => AjaxRequest
   -> (Json -> Either String a)
@@ -38,18 +39,18 @@ throwLeft (Left e) = throwError e
 throwLeft (Right a) = pure a
 
 
-encodeListQuery :: forall a b r. Generic a r => GenericEncode r => SPSettings_ b -> String -> Array a -> String
+encodeListQuery :: forall a b r. Generic a r => EncodeAeson r => SPSettings_ b -> String -> Array a -> String
 encodeListQuery opts'@(SPSettings_ opts) fName = intercalate "&" <<< map (encodeQueryItem opts' fName)
 
 -- | The given name is assumed to be already escaped.
-encodeQueryItem :: forall a b r. Generic a r => GenericEncode r => SPSettings_ b -> String -> a -> String
+encodeQueryItem :: forall a b r. Generic a r => EncodeAeson r => SPSettings_ b -> String -> a -> String
 encodeQueryItem opts'@(SPSettings_ opts) fName val = fName <> "=" <> encodeURLPiece opts' val
 
 -- | Call opts.toURLPiece and encode the resulting string with encodeURIComponent.
-encodeURLPiece :: forall a params r. Generic a r => GenericEncode r => SPSettings_ params -> a -> String
+encodeURLPiece :: forall a params r. Generic a r => EncodeAeson r => SPSettings_ params -> a -> String
 encodeURLPiece (SPSettings_ opts) = case opts.toURLPiece of SPSettingsToUrlPiece_ f -> f
 
-encodeHeader :: forall a params r. Generic a r => GenericEncode r => SPSettings_ params -> a -> String
+encodeHeader :: forall a params r. Generic a r => EncodeAeson r => SPSettings_ params -> a -> String
 encodeHeader (SPSettings_ opts) = case opts.encodeHeader of SPSettingsEncodeHeader_ f -> f
 
 reportRequestError :: AjaxRequest -> (String -> ErrorDescription) -> String -> String -> AjaxError
