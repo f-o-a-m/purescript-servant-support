@@ -3,7 +3,6 @@ module Servant.PureScript.Util where
 import Prelude
 import Control.Monad.Error.Class (class MonadError, throwError)
 import Data.Argonaut.Aeson.Decode.Generic (class DecodeAeson)
-import Data.Argonaut.Aeson.Encode.Generic (class EncodeAeson)
 import Data.Argonaut.Core (Json)
 import Data.Argonaut.Parser (jsonParser)
 import Data.Bifunctor (lmap)
@@ -13,7 +12,7 @@ import Data.Generic.Rep (class Generic)
 import Network.HTTP.Affjax (AffjaxResponse)
 import Network.HTTP.StatusCode (StatusCode(..))
 import Servant.PureScript.Affjax (makeAjaxError, AjaxError, ErrorDescription(DecodingError, ParsingError, UnexpectedHTTPStatus), AjaxRequest)
-import Servant.PureScript.Settings (SPSettings_(SPSettings_), SPSettingsToUrlPiece_(SPSettingsToUrlPiece_), SPSettingsEncodeHeader_(SPSettingsEncodeHeader_))
+import Servant.PureScript.Settings (SPSettings_(SPSettings_), SPSettingsToUrlPiece_(SPSettingsToUrlPiece_), SPSettingsEncodeHeader_(SPSettingsEncodeHeader_), class ToHttpApiData)
 
 -- | Get the result of a request.
 -- |
@@ -38,19 +37,18 @@ throwLeft :: forall a e m. MonadError e m => Either e a -> m a
 throwLeft (Left e) = throwError e
 throwLeft (Right a) = pure a
 
-
-encodeListQuery :: forall a b r. Generic a r => EncodeAeson r => SPSettings_ b -> String -> Array a -> String
+encodeListQuery :: forall a b. ToHttpApiData a => SPSettings_ b -> String -> Array a -> String
 encodeListQuery opts'@(SPSettings_ opts) fName = intercalate "&" <<< map (encodeQueryItem opts' fName)
 
 -- | The given name is assumed to be already escaped.
-encodeQueryItem :: forall a b r. Generic a r => EncodeAeson r => SPSettings_ b -> String -> a -> String
+encodeQueryItem :: forall a b. ToHttpApiData a => SPSettings_ b -> String -> a -> String
 encodeQueryItem opts'@(SPSettings_ opts) fName val = fName <> "=" <> encodeURLPiece opts' val
 
 -- | Call opts.toURLPiece and encode the resulting string with encodeURIComponent.
-encodeURLPiece :: forall a params r. Generic a r => EncodeAeson r => SPSettings_ params -> a -> String
+encodeURLPiece :: forall a params. ToHttpApiData a => SPSettings_ params -> a -> String
 encodeURLPiece (SPSettings_ opts) = case opts.toURLPiece of SPSettingsToUrlPiece_ f -> f
 
-encodeHeader :: forall a params r. Generic a r => EncodeAeson r => SPSettings_ params -> a -> String
+encodeHeader :: forall a params. ToHttpApiData a => SPSettings_ params -> a -> String
 encodeHeader (SPSettings_ opts) = case opts.encodeHeader of SPSettingsEncodeHeader_ f -> f
 
 reportRequestError :: AjaxRequest -> (String -> ErrorDescription) -> String -> String -> AjaxError
