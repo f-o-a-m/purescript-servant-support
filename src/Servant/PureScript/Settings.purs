@@ -8,7 +8,8 @@ import Data.Argonaut.Aeson.Options (Options, defaultOptions)
 import Data.Argonaut.Aeson.Decode.Generic (class DecodeAeson, genericDecodeAeson)
 import Data.Argonaut.Aeson.Encode.Generic (class EncodeAeson, genericEncodeAeson)
 import Data.Argonaut (class EncodeJson, Json, encodeJson, foldJson)
-import Data.Either (Either)
+import Data.Either (Either(..))
+import Data.Maybe (Maybe(..))
 import Data.Generic.Rep (class Generic, Constructor(..), Argument(..), from)
 import Global (encodeURIComponent)
 
@@ -45,6 +46,14 @@ instance toHttpApiDataInt :: ToHttpApiData Int where
 instance toHttpApiDataNumber :: ToHttpApiData Number where
   toQueryParam = show
 
+instance toHttpApiDataMaybe :: ToHttpApiData a => ToHttpApiData (Maybe a) where
+  toQueryParam Nothing = "nothing"
+  toQueryParam (Just a) = "just " <> toQueryParam a
+
+instance toHttpApiDataEither :: (ToHttpApiData a, ToHttpApiData b) => ToHttpApiData (Either a b) where
+  toQueryParam (Left a) = "left " <> toQueryParam a
+  toQueryParam (Right b) = "right " <> toQueryParam b
+
 class GenericToHttpApiData a where
   toQueryParam' :: a -> String
 
@@ -60,7 +69,7 @@ defaultSettings :: forall params. params -> SPSettings_ params
 defaultSettings params = SPSettings_ {
     encodeJson : SPSettingsEncodeJson_ (genericEncodeAeson jOpts)
   , decodeJson : SPSettingsDecodeJson_ (genericDecodeAeson jOpts)
-  , toURLPiece : SPSettingsToUrlPiece_ toQueryParam
-  , encodeHeader : SPSettingsEncodeHeader_ toQueryParam
+  , toURLPiece : SPSettingsToUrlPiece_ (encodeURIComponent <<< toQueryParam)
+  , encodeHeader : SPSettingsEncodeHeader_ (encodeURIComponent <<< toQueryParam)
   , params : params
 }
