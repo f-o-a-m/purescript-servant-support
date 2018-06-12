@@ -4,10 +4,9 @@ import Prelude
 import Control.Monad.Error.Class (class MonadError, throwError)
 import Data.Argonaut (Json, class DecodeJson, class EncodeJson)
 import Data.Argonaut.Parser (jsonParser)
-import Data.Array (catMaybes)
 import Data.Bifunctor (lmap)
 import Data.Either (Either(..))
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe, maybe)
 import Data.Foldable (intercalate)
 import Network.HTTP.Affjax (AffjaxResponse)
 import Network.HTTP.StatusCode (StatusCode(..))
@@ -38,16 +37,16 @@ throwLeft (Right a) = pure a
 
 
 encodeListQuery :: forall a b. EncodeJson a => SPSettings_ b -> String -> Array a -> String
-encodeListQuery opts'@(SPSettings_ opts) fName = intercalate "&" <<< catMaybes <<< map (encodeQueryItem opts' fName)
+encodeListQuery opts'@(SPSettings_ opts) fName = intercalate "&" <<< map (encodeQueryItem opts' fName)
 
 class EncodeQueryItem a where
-  encodeQueryItem :: forall b. SPSettings_ b -> String -> a -> Maybe String
+  encodeQueryItem :: forall b. SPSettings_ b -> String -> a -> String
 
 instance jsonEncodeQ :: EncodeJson a => EncodeQueryItem a where
-  encodeQueryItem opts'@(SPSettings_ opts) fName val = Just $ fName <> "=" <> encodeURLPiece opts' val
+  encodeQueryItem opts'@(SPSettings_ opts) fName val = fName <> "=" <> encodeURLPiece opts' val
 
 instance maybeEncodeQ :: EncodeQueryItem a => EncodeQueryItem (Maybe a) where
-  encodeQueryItem opts fName mval = mval >>= encodeQueryItem opts fName
+  encodeQueryItem opts fName = maybe "" $ encodeQueryItem opts fName
 
 -- | Call opts.toURLPiece and encode the resulting string with encodeURIComponent.
 encodeURLPiece :: forall a params. EncodeJson a => SPSettings_ params -> a -> String
