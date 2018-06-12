@@ -6,7 +6,6 @@ import Data.Argonaut (Json, class DecodeJson, class EncodeJson)
 import Data.Argonaut.Parser (jsonParser)
 import Data.Bifunctor (lmap)
 import Data.Either (Either(..))
-import Data.Maybe (Maybe, maybe)
 import Data.Foldable (intercalate)
 import Network.HTTP.Affjax (AffjaxResponse)
 import Network.HTTP.StatusCode (StatusCode(..))
@@ -35,18 +34,12 @@ throwLeft :: forall a e m. MonadError e m => Either e a -> m a
 throwLeft (Left e) = throwError e
 throwLeft (Right a) = pure a
 
-
 encodeListQuery :: forall a b. EncodeJson a => SPSettings_ b -> String -> Array a -> String
 encodeListQuery opts'@(SPSettings_ opts) fName = intercalate "&" <<< map (encodeQueryItem opts' fName)
 
-class EncodeQueryItem a where
-  encodeQueryItem :: forall b. SPSettings_ b -> String -> a -> String
-
-instance jsonEncodeQ :: EncodeJson a => EncodeQueryItem a where
-  encodeQueryItem opts'@(SPSettings_ opts) fName val = fName <> "=" <> encodeURLPiece opts' val
-
-instance maybeEncodeQ :: EncodeQueryItem a => EncodeQueryItem (Maybe a) where
-  encodeQueryItem opts fName = maybe "" $ encodeQueryItem opts fName
+-- | The given name is assumed to be already escaped.
+encodeQueryItem :: forall a b. EncodeJson a => SPSettings_ b -> String -> a -> String
+encodeQueryItem opts'@(SPSettings_ opts) fName val = fName <> "=" <> encodeURLPiece opts' val
 
 -- | Call opts.toURLPiece and encode the resulting string with encodeURIComponent.
 encodeURLPiece :: forall a params. EncodeJson a => SPSettings_ params -> a -> String
